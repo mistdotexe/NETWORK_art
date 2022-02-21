@@ -1,8 +1,7 @@
 from array import array
-from audioop import bias
 from math import exp
-import numpy as np
-import gnumpy as gnp
+import cupy as cp
+
 
 weights = []
 biases = []
@@ -13,20 +12,18 @@ size = 1, 1
 
 
 def activation_func(x):
-    return np.tanh(x)
-
-
-activation_func_vec = np.vectorize(activation_func)
+    return cp.tanh(x)
+activation_func_vec = cp.vectorize(activation_func)
 
 
 def gen_weights() -> array:
     arr = []
     global weights
     for n in range(len(size)-1):
-        tmp_weights = np.random.rand(size[n], size[n+1])*2 - 1
+        tmp_weights = cp.random.random(size = (size[n], size[n+1]), dtype=cp.float32)*2 - 1
         tmp_weights = tmp_weights * weight_range
         arr.append(tmp_weights)
-    weights = gnp.garray(arr)
+    weights = arr
     return arr
 
 
@@ -34,18 +31,18 @@ def gen_biases() -> array:
     arr = []
     global biases
     for n in range(1, len(size)):
-        tmp_biases = np.random.rand(size[n])*2 - 1
+        tmp_biases = cp.random.random(size = size[n], dtype=cp.float32)*2 - 1
         tmp_biases = tmp_biases * bias_range
-        arr.append([tmp_biases for _ in range(input_dim[-1])])
-    biases = gnp.garray(arr)
+        arr.append(tmp_biases)
+    biases = arr
     return arr
 
 
 def calc(a):
-    out = a
+    out = cp.array(a, dtype=cp.float32)
     for layer in range(len(size) - 1):
-        out = out * weights[layer]
-        out = out + biases[layer]
+        out = cp.matmul(out, weights[layer])
+        out = cp.add(out, biases[layer])
         out = activation_func_vec(out)
     return out
 
