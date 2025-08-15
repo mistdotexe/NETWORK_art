@@ -1,57 +1,66 @@
 from array import array
 from math import exp
-import cupy as cp
-
-
-weights = []
-biases = []
-weight_range = 4
-bias_range = 1
-input_dim = 1
-size = 1, 1
-
+import numpy as np   
+from PIL import Image
 
 def activation_func(x):
-    return cp.tanh(x)
-activation_func_vec = cp.vectorize(activation_func)
+        return[(abs(k)+k)/2 for k in x]
+
+class NeuralNetwork:
+    def __init__(self):
+        self.weights = [1]
+        self.biases = [0]
+        self.weight_range = [-1, 1]
+        self.bias_range = [-1, 1]
+        self.input_dim = 1
+        self.size = (1, 1)
+        self.imgBase = []
 
 
-def gen_weights() -> array:
-    arr = []
-    global weights
-    for n in range(len(size)-1):
-        tmp_weights = cp.random.random(size = (size[n], size[n+1]), dtype=cp.float32)*2 - 1
-        tmp_weights = tmp_weights * weight_range
-        arr.append(tmp_weights)
-    weights = arr
-    return arr
+    def gen_weights(self) -> array:
+        arr = []
+        for n in range(len(self.size)-1):
+            tmp_weights = np.random.rand(self.size[n], self.size[n+1])
+            tmp_weights = tmp_weights * (self.weight_range[1]-self.weight_range[0]) + self.weight_range[0]
+            arr.append(tmp_weights)
+        self.weights = arr
+        return arr
 
 
-def gen_biases() -> array:
-    arr = []
-    global biases
-    for n in range(1, len(size)):
-        tmp_biases = cp.random.random(size = size[n], dtype=cp.float32)*2 - 1
-        tmp_biases = tmp_biases * bias_range
-        arr.append(tmp_biases)
-    biases = arr
-    return arr
+    def gen_biases(self) -> array:
+        arr = []
+        global biases
+        for n in range(1, len(self.size)):
+            tmp_biases = np.random.random(size = self.size[n])
+            tmp_biases = tmp_biases * (self.bias_range[1]-self.bias_range[0]) + self.bias_range[0]
+            arr.append(tmp_biases)
+        self.biases = arr
+        return arr
 
 
-def calc(a):
-    out = cp.array(a, dtype=cp.float32)
-    for layer in range(len(size) - 1):
-        out = cp.matmul(out, weights[layer])
-        out = cp.add(out, biases[layer])
-        out = activation_func_vec(out)
-    return out
+    def calc(self,a) -> array:
+        out = np.array(a, dtype=np.float32)
+        for layer in range(len(self.size) - 1):
+            out = np.matmul(out, self.weights[layer])
+            out = np.add(out, self.biases[layer])
+            out = activation_func(out)
+        return out
 
 
-def set_inputDim(i):
-    global input_dim
-    input_dim = i
-
-
-def setSize(s):
-    global size
-    size = s
+    def gen_image_base(self, width, height, zoom ):
+        pixels = []
+        for y in range(int(-height/2), int(height/2)):
+            tmpx = []
+            for x in range(int(-width/2), int(width/2)):
+                tmpx.append([x/width*zoom, y/height*zoom*width/height])
+            pixels.append(tmpx)
+        self.imgBase = pixels
+        return pixels
+        
+    def gen_image(self):
+        img = self.calc(self.imgBase)
+        max_val = np.max(img)
+        img = img / max_val * 255
+        img = np.uint8(img)
+        img = Image.fromarray(img, mode = 'RGB')  
+        return img
